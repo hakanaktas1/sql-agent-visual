@@ -23,6 +23,16 @@ else:
     # ChatOpenAI often defaults to looking for OPENAI_API_KEY
     os.environ["OPENAI_API_KEY"] = api_key
 
+# --- LangSmith Compatibility ---
+# The LangSmith UI sometimes recommends LANGSMITH_ prefixes, but the library expects LANGCHAIN_ prefixes.
+# We map them here for convenience.
+for key in ["TRACING", "ENDPOINT", "API_KEY", "PROJECT"]:
+    ls_key = f"LANGSMITH_{key}"
+    lc_key = f"LANGCHAIN_{key if key != 'TRACING' else 'TRACING_V2'}"
+    if os.environ.get(ls_key) and not os.environ.get(lc_key):
+        os.environ[lc_key] = os.environ[ls_key]
+        print(f"DEBUG: Mapped {ls_key} to {lc_key}")
+
 if not os.environ.get("LANGCHAIN_API_KEY"):
     pass
 
