@@ -2,15 +2,28 @@
 import os
 import getpass
 from typing import Literal, Annotated
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # --- Configuration ---
 # Set your API keys here or in your environment variables
 # Note: GOOGLE_API_KEY is not needed when using OpenRouter
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
-os.environ["LANGCHAIN_PROJECT"] = "SQL Agent Visualization"
+# --- Configuration ---
+# API Keys are loaded from .env
+api_key = os.environ.get("OPENROUTER_API_KEY")
+if not api_key:
+    print("CRITICAL ERROR: OPENROUTER_API_KEY is missing from environment!")
+    print("Please make sure you have a .env file with OPENROUTER_API_KEY=sk-or-...")
+else:
+    print(f"DEBUG: Found OPENROUTER_API_KEY starting with {api_key[:5]}...")
+    api_key = api_key.strip()
+    # ChatOpenAI often defaults to looking for OPENAI_API_KEY
+    os.environ["OPENAI_API_KEY"] = api_key
 
 if not os.environ.get("LANGCHAIN_API_KEY"):
-    # os.environ["LANGCHAIN_API_KEY"] = getpass.getpass("Enter LangSmith API Key: ")
     pass
 
 # --- Imports ---
@@ -23,19 +36,13 @@ from langgraph.prebuilt import ToolNode
 from langchain_core.tools import Tool
 from langchain_experimental.utilities import PythonREPL
 
-# --- Configuration ---
-# Set your API keys here or in your environment variables
-os.environ["OPENROUTER_API_KEY"] = "YOUR_OPENROUTER_API_KEY"
-if "OPENROUTER_API_KEY" not in os.environ:
-    print("WARNING: OPENROUTER_API_KEY not found in environment. Please set it in the script or environment.")
-
 # 1. Initialize Model (OpenRouter)
-# Using 'google/gemini-flash-1.5' (Correct ID for OpenRouter usually)
-# Alternatives: 'openai/gpt-4o-mini', 'deepseek/deepseek-chat'
 model = ChatOpenAI(
-    model="openai/gpt-4o-mini",
-    openai_api_key=os.environ.get("OPENROUTER_API_KEY"),
+    model="deepseek/deepseek-chat",
+    openai_api_key=api_key,
     openai_api_base="https://openrouter.ai/api/v1",
+    # Some versions prefer base_url
+    base_url="https://openrouter.ai/api/v1",
     temperature=0
 )
 
