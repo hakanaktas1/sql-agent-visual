@@ -10,7 +10,7 @@ load_dotenv()
 # --- Configuration ---
 # Set your API keys here or in your environment variables
 # Note: GOOGLE_API_KEY is not needed when using OpenRouter
-os.environ["LANGCHAIN_TRACING_V2"] = "false"
+# (Tracing is now controlled by .env)
 # --- Configuration ---
 # API Keys are loaded from .env
 api_key = os.environ.get("OPENROUTER_API_KEY")
