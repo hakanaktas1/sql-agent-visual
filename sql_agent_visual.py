@@ -37,7 +37,6 @@ if not os.environ.get("LANGCHAIN_API_KEY"):
     pass
 
 # --- Imports ---
-from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SQLDatabase
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage, AIMessage
@@ -46,18 +45,24 @@ from langgraph.prebuilt import ToolNode
 from langchain_core.tools import Tool
 from langchain_experimental.utilities import PythonREPL
 
-# 1. Initialize Model (OpenRouter)
-model = ChatOpenAI(
-    model="deepseek/deepseek-chat",
-    openai_api_key=api_key,
-    openai_api_base="https://openrouter.ai/api/v1",
-    # Some versions prefer base_url
-    base_url="https://openrouter.ai/api/v1",
-    temperature=0
+# 1. Initialize Model (Google Gemini)
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+if "GOOGLE_API_KEY" not in os.environ:
+    if "GEMINI_API_KEY" in os.environ:
+        os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
+        print("DEBUG: Using GEMINI_API_KEY as GOOGLE_API_KEY")
+    else:
+        print("CRITICAL ERROR: GOOGLE_API_KEY is missing from environment!")
+
+model = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash-lite",
+    temperature=0,
+    convert_system_message_to_human=True
 )
 
 # 2. Connect to Database
-db = SQLDatabase.from_uri("sqlite:///Chinook.db")
+db = SQLDatabase.from_uri("sqlite:///olist.sqlite")
 print(f"Database Dialect: {db.dialect}")
 print(f"Usable Tables: {db.get_usable_table_names()}")
 
@@ -103,23 +108,24 @@ def generate_query(state: MessagesState):
     prompt = """
     You are a sophisticated SQL + Data Visualization Agent.
     
-    Your goal is to answer the user's question using the `Chinook` database.
+    Your goal is to answer the user's question using the `Olist` database.
     
     GUIDELINES:
     1. **Data Retrieval**: Always start by writing a valid SQLite query to get the necessary data. Use `sql_db_query`.
-    2. **Visualization**: If the user asks for a chart/graph/plot:
+    2. **Format Output**: 
+       - If the result is a list of items/numbers, **ALWAYS format it as a valid Markdown Table**.
+       - Do not dump raw text or long string blobs.
+       - Use bullet points for unstructured summaries.
+    3. **Visualization**: If the user asks for a chart/graph/plot:
        - FIRST, fetch the data with SQL.
-       - SECOND, once you have the data (it will appear in your history), use `python_repl` to plot it.
+       - SECOND, once you have the data (it will appear in your history as a ToolMessage), use `python_repl` to plot it.
        - In your Python code, manually define the data lists based on the SQL result.
-       - Example Python Code:
-         ```python
-         import matplotlib.pyplot as plt
-         data = [10, 20, 30]
-         labels = ['A', 'B', 'C']
-         plt.bar(labels, data)
-         print("Chart created.")
-         ```
-    3. **Schema**: If you are unsure about column names, use `sql_db_schema`.
+       - **IMPORTANT**: You MUST save the plot to a file named `output_plot.png`.
+    4. **Schema**: If you are unsure about column names, use `sql_db_schema`.
+    
+    CRITICAL INSTRUCTION:
+    - If you have just received the schema (via sql_db_schema), you MUST immediately generate a SQL query using `sql_db_query` to answer the user's question. Do not return empty text.
+    - If you have just received query results, check if you need to visualize them. If yes, use `python_repl`.
     
     Current Tables: {tables}
     """
@@ -186,18 +192,39 @@ graph_builder.add_edge("get_schema", "agent")
 # Compile
 graph = graph_builder.compile()
 
-# --- Visualization (Optional) ---
+# --- Visualization (Save Graph & Mermaid) ---
 try:
-    from IPython.display import Image, display
-    display(Image(graph.get_graph().draw_mermaid_png()))
-except:
-    pass
+    # 1. Save PNG with smoother curves
+    # Note: methods or arguments might vary by version, using safe default if fails
+    try:
+        graph_image = graph.get_graph().draw_mermaid_png(
+            draw_method=None, # defaults to API
+            curve_style="basis", # Smoother lines
+            background_color="white",
+            padding=10
+        )
+    except:
+         # Fallback for older versions
+        graph_image = graph.get_graph().draw_mermaid_png()
+        
+    with open("agent_architecture.png", "wb") as f:
+        f.write(graph_image)
+    print("Graph saved to agent_architecture.png")
+    
+    # 2. Save Markdown/Mermaid Source (For high-quality external rendering)
+    mermaid_code = graph.get_graph().draw_mermaid()
+    with open("agent_architecture.mmd", "w", encoding="utf-8") as f:
+        f.write(mermaid_code)
+    print("Mermaid source saved to agent_architecture.mmd (Use in mermaid.live for custom styling)")
+    
+except Exception as e:
+    print(f"Could not save graph: {e}")
 
 # --- MAIN EXECUTION BLOCK ---
 if __name__ == "__main__":
     print("\n>>> SQL AGENT with VISUALIZATION <<<\n")
     
-    query = "Show me the top 5 artists by number of tracks and plot a bar chart."
+    query = "En çok satılan ürün kategorilerini listele ve bar chart çiz"
     print(f"User Question: {query}\n")
     
     events = graph.stream(
