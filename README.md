@@ -1,15 +1,20 @@
-# SQL Agent with Visualization 📊
+# SQL Agent with Visualization & Streamlit UI 📊
 
-This project implements an intelligent AI Agent capable of querying a SQL database (`Chinook.db`) and generating data visualizations (charts/graphs) on demand.
-
-It uses **LangChain**, **LangGraph**, and **OpenAI/Google Gemini** models via **OpenRouter** to process natural language queries, execute SQL, and run Python code for plotting.
+This project implements an intelligent AI Agent capable of querying a SQL database (`olist.sqlite`) and generating data visualizations (charts/graphs) on demand. It features a professional **Streamlit** web interface for user interaction.
 
 ## 🚀 Features
 
-*   **Text-to-SQL**: Converts natural language questions into valid SQL queries.
+*   **Streamlit Web UI**: A clean, corporate-style chat interface for interacting with the agent.
+*   **Text-to-SQL**: Converts natural language questions into valid SQL queries for the Olist E-commerce dataset.
 *   **Data Visualization**: Automatically generates bar charts, line graphs, etc., using `matplotlib` when requested.
-*   **Self-Correction**: Can check table schemas and retry queries if errors occur.
-*   **Cost-Effective**: Configured to use efficient models like `Gemini 1.5 Flash` via OpenRouter.
+*   **Intelligent Routing**: Uses **LangGraph** to decide when to query SQL, when to check schemas, and when to plot data.
+*   **Model**: Powered by **Google Gemini 2.5 Flash** (via `langchain-google-genai`).
+
+## 🏗️ Architecture
+
+The agent uses a ReAct-style loop to reason about data and visualization:
+
+![Agent Architecture](agent_architecture.png)
 
 ## 🛠️ Installation
 
@@ -21,36 +26,43 @@ It uses **LangChain**, **LangGraph**, and **OpenAI/Google Gemini** models via **
 
 2.  Install dependencies:
     ```bash
-    pip install langchain langchain-openai langchain-community langchain-experimental matplotlib seaborn
+    pip install langchain langchain-google-genai langchain-community langchain-experimental matplotlib streamlit
     ```
 
 ## 🔑 Configuration
 
-You need an **OpenRouter API Key** to run the agent.
+You need a **Google Gemini API Key**.
 
-1.  Open `sql_agent_visual.py`.
-2.  Find the following line and replace it with your key (or set it as an environment variable):
-    ```python
-    os.environ["OPENROUTER_API_KEY"] = "sk-or-..." 
+1.  Create a `.env` file in the root directory:
+    ```env
+    GOOGLE_API_KEY=AIzaSy...
     ```
 
 ## 🏃‍♂️ Usage
 
-Run the agent with the following command:
+### 1. Web Interface (Recommended)
+Run the Streamlit app:
+```bash
+python -m streamlit run app.py
+```
 
+### 2. Terminal Mode
+Run the backend script directly:
 ```bash
 python sql_agent_visual.py
 ```
 
-### Example Queries
-*   "Show me the top 5 artists by number of tracks and plot a bar chart."
-*   "How many invoices are there per country? Visualize it."
-*   "List the tracks in the 'Rock' genre."
+### Example Queries (Turkish Supported)
+*   "En çok satılan ürün kategorilerini listele ve bar chart çiz"
+*   "Hangi eyaletten (customer_state) en çok sipariş geliyor?"
+*   "Show me the top 5 sellers by revenue."
 
 ## 📂 Project Structure
 
-*   `sql_agent_visual.py`: The main script containing the Agent logic and Graph definition.
-*   `Chinook.db`: Sample SQLite database (Music Store data).
+*   `app.py`: Streamlit frontend application.
+*   `sql_agent_visual.py`: Main agent logic and LangGraph definition.
+*   `olist.sqlite`: E-commerce dataset.
+*   `agent_architecture.png`: Visual representation of the agent's logic.
 
 ## 📝 License
 
